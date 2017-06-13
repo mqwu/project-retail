@@ -108,3 +108,74 @@ bb.y.crude.sum <- bb.y.crude %>% group_by(date) %>% summarise(min_RB=min(RB), ma
 
 
 #d %>% filter(date=="2012-01-04")
+
+
+
+##########################################################
+# study corrleation between retail and crude 
+##########################################################
+# load tic data
+d <- read.csv("./data/tic/crude_gas.csv", header=T, na.strings = "NA")
+d$date <- as.Date(d$date)
+
+tic <- d %>% 
+            group_by(date) %>% 
+            summarise(RB_Mean = mean(RB),
+                      HO_Mean = mean(HO),
+                      BRN_Mean = mean(BRN),
+                      GCL_Mean = mean(GCL)
+                     )
+
+# load master card data
+ma <- read.csv("./data/mas/gas_shell-mas.csv", header=T, na.strings = "NA")
+ma$lastwkd <- as.Date(ma$lastwkd)
+ma$date <- ma$lastwkd + 5  # next wed, i.e. EIA release date
+keep <- c("date", "retail_gas", "Master_gas")
+ma <- ma[, keep]
+
+
+
+# load retail data
+#setwd("C:\\Apps\\projects\\Retail\\code\\Ming")
+allin1 <- readRDS("./code/Ming/allin1_retail.rds")
+
+keep <- c("lastwkd",
+          "weekly_regular", "weekly_mid_grade", "weekly_svpn", "weekly_diesel",
+          "Diesel", "Gas", "gas_Mean", "diesel_Mean")
+retail <- allin1[, keep]
+
+retail$date <- retail$lastwkd + 5  # next wed, i.e. EIA release date
+
+
+# join all data: retail, master, tic data
+all <- left_join(retail, ma, by="date")
+all <- left_join(all, tic, by="date")
+
+
+# corr
+A <- all[,-c(1, 10)]
+M <- cor(A, use="pairwise.complete.obs")
+
+png(paste0("./doc/fig/corr/corr_retail_ma_tic","_circle.png"), width=1200, height=1200)
+corrplot(M, method="circle", type="upper", col=brewer.pal(n=11, name="RdYlBu"))
+dev.off()
+
+png(paste0("./doc/fig/corr/corr_retail_ma_tic", "_num.png"), width=1200, height=1200)
+corrplot(M, method="number", type="upper", col=brewer.pal(n=8, name="RdYlBu"))
+dev.off()
+
+          
+    
+all16to17 <- all %>% filter(year(date)>2015)
+# corr
+A <- all16to17[,-c(1, 10)]
+M <- cor(A, use="pairwise.complete.obs")
+
+png(paste0("./doc/fig/corr/corr_16to17_retail_ma_tic","_circle.png"), width=1200, height=1200)
+corrplot(M, method="circle", type="upper", col=brewer.pal(n=11, name="RdYlBu"))
+dev.off()
+
+png(paste0("./doc/fig/corr/corr_16to17_retail_ma_tic", "_num.png"), width=1200, height=1200)
+corrplot(M, method="number", type="upper", col=brewer.pal(n=8, name="RdYlBu"))
+dev.off()
+
